@@ -12,6 +12,16 @@ on:
   # pull_request_target event is required for autolabeler to support PRs from forks
   # pull_request_target:
   #   types: [opened, reopened, synchronize]
+  workflow_call:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: read
