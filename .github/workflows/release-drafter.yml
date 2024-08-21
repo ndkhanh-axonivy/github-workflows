@@ -11,7 +11,7 @@ on:
         description: 'Is this a prerelease?'
         required: false
         default: 'false'
-        type: boolean
+        type: string
 
 permissions:
   contents: read
