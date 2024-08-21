@@ -23,6 +23,7 @@ jobs:
     env:
       IS_PUSH_EVENT_TRIGGERED: ${{ github.event_name == 'push' }}
       COMMITISH: 'master'
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         if: env.IS_PUSH_EVENT_TRIGGERED == 'false'
