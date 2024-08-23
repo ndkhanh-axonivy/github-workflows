@@ -5,7 +5,7 @@ on:
     inputs:
       publish_release:
         required: false
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -26,6 +26,6 @@ jobs:
           name: ${{ env.RELEASE_VERSION }} 🛒
           tag: ${{ env.RELEASE_VERSION }}
           version: ${{ env.RELEASE_VERSION }}
-          publish: true
+          publish: ${{ inputs.publish_release }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
