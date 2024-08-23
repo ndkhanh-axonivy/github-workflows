@@ -26,6 +26,6 @@ jobs:
           name: ${{ env.RELEASE_VERSION }} 🛒
           tag: ${{ env.RELEASE_VERSION }}
           version: ${{ env.RELEASE_VERSION }}
-          publish: ${{ inputs.publish_release }}
+          publish: ${{ github.event.inputs.publish_release }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
