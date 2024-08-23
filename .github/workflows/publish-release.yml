@@ -2,6 +2,7 @@ name: Reusable Release Publisher
 
 on:
   workflow_call:
+    inputs:
       publish_release:
         required: false
         default: false
