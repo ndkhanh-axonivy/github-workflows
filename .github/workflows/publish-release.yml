@@ -6,7 +6,7 @@ on:
       publish_release:
         required: false
         default: true
-        type: boolean
+        type: string
 
 permissions:
   contents: read
@@ -26,6 +26,6 @@ jobs:
           name: ${{ env.RELEASE_VERSION }} 🛒
           tag: ${{ env.RELEASE_VERSION }}
           version: ${{ env.RELEASE_VERSION }}
-          publish: ${{ fromJson(github.event.inputs.publish_release) }}
+          publish: ${{ github.event.inputs.publish_release }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
