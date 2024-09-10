@@ -2,45 +2,58 @@ name: Reusable Release-Build
 
 on: 
   workflow_call:
-    inputs:
-      javaVersion:
-        type: number
-        default: 17
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-
+    if: github.ref == 'refs/heads/master'
     steps:
-    - uses: actions/checkout@v4
+        - uses: actions/checkout@v3
+        - name: Set up Maven Central Repository
+          uses: actions/setup-java@v3
+          with:
+            java-version: '17'
+            distribution: 'temurin'
+            server-id: ossrh
+            server-username: MAVEN_USERNAME
+            server-password: MAVEN_PASSWORD
+            gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+            gpg-passphrase: MAVEN_GPG_PASSPHRASE
+        - name: Configure Git
+          run: |
+            git config user.email "${{ github.actor }}@users.noreply.github.com"
+            git config user.name "${{ github.actor }}"
+            git checkout -b new-release
 
-    - name: Get branch name
-      id: branch-name
-      uses: tj-actions/branch-names@v8
+        - name: Introduce final Release version
+          run: |
+            mvn build-helper:parse-version versions:set -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion} -DprocessAllModules -DgenerateBackupPoms=false versions:commit
+            git add .
+            git commit -m "update versions for release"
+            releasedVersion=$(mvn -q -Dexec.executable="echo" -Dexec.args='${project.version}' --non-recursive exec:exec)
+            git tag "v${releasedVersion}" -a -m "Official release ${releasedVersion}"
+            git push origin "v${releasedVersion}"
+        - name: Publish package
+          run: mvn --batch-mode -f pom.xml deploy -PossrhDeploy 
+          env:
+            MAVEN_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+            MAVEN_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+            MAVEN_CENTRAL_TOKEN: ${{ secrets.NEXUS_PASSWORD }}
+            MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+            MAVEN_OPTS: "--add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
 
-    - name: Setup Java JDK
-      uses: actions/setup-java@v4
-      with:
-        java-version: ${{ inputs.javaVersion }}
-        distribution: temurin
-        server-id: github
-
-    - name: Configure Git
-      run: |
-        git config user.email "${{ github.actor }}@users.noreply.github.com"
-        git config user.name "${{ github.actor }}"
-        git checkout -b new-release
-
-    - name: Build with Maven
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: mvn --batch-mode -Darguments="-Dmaven.test.skip=true -DaltDeploymentRepository=github::https://maven.pkg.github.com/axonivy-market/${{ github.event.repository.name }}" release:prepare release:perform
-
-    - name: Create pull request
-      uses: repo-sync/pull-request@v2
-      with:
-        destination_branch: ${{ steps.branch-name.outputs.current_branch }}
-        source_branch: new-release
-        pr_title: "Release"
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        pr_assignee: ${{ github.actor }}
+        - name: Prepare Next dev cycle
+          run: |
+            mvn build-helper:parse-version versions:set -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT -DprocessAllModules -DgenerateBackupPoms=false versions:commit
+            git add .
+            git commit -m "update versions for next dev-cycle"
+            git push -u origin new-release
+  
+        - name: Create pull request
+          uses: repo-sync/pull-request@v2
+          with:
+            destination_branch: ${{ steps.branch-name.outputs.current_branch }}
+            source_branch: new-release
+            pr_title: "Release"
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            pr_assignee: ${{ github.actor }}
